@@ -5,7 +5,7 @@ channels:
 dependencies:
   - python=3.12
   - opencv
-  - pyqt
+  - pyqt=5 # Dependency locked to pyqt5
   - tifffile
   - zarr
   - scipy
