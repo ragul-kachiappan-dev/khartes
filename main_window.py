@@ -273,40 +273,77 @@ class PositionSetter(QWidget):
         self.main_window = main_window
         hlayout = QHBoxLayout()
         self.setLayout(hlayout)
+        
         label = QLabel("Set Position:")
         hlayout.addWidget(label)
-        zsetter = QSpinBox()
-        zsetter.setRange(0, 1000000)
-        zsetter.setMinimumWidth(80)
-        ysetter = QSpinBox()
-        ysetter.setRange(0, 1000000)
-        ysetter.setMinimumWidth(80)
-        xsetter = QSpinBox()
-        xsetter.setRange(0, 1000000)
-        xsetter.setMinimumWidth(80)
-        hlayout.addWidget(QLabel("Z:"))
-        hlayout.addWidget(zsetter)
-        hlayout.addWidget(QLabel("Y:"))
-        hlayout.addWidget(ysetter)
-        hlayout.addWidget(QLabel("X:"))
-        hlayout.addWidget(xsetter)
+        
+        # Single input field for comma-separated coordinates
+        coordinate_input = QLineEdit()
+        coordinate_input.setMinimumWidth(200)
+        coordinate_input.setMaximumWidth(300)
+        coordinate_input.setPlaceholderText("x, y, z (e.g., 2005, 3857, 7444)")
+        coordinate_input.setText("0, 0, 0")
+        
+        hlayout.addWidget(coordinate_input)
+        
         button = QPushButton()
         button.setText("Move to position")
         button.clicked.connect(self.onClicked)
         hlayout.addWidget(button)
         hlayout.addStretch()
 
-        self.zsetter = zsetter
-        self.ysetter = ysetter
-        self.xsetter = xsetter
+        self.coordinate_input = coordinate_input
 
+        # Connect Enter key to trigger move action
+        coordinate_input.returnPressed.connect(self.onClicked)
+
+    def parse_coordinates(self, text):
+        """Parse comma-separated coordinates from text input.
+        
+        Args:
+            text (str): Input string in format "x, y, z"
+            
+        Returns:
+            tuple: (x, y, z) as integers, or None if parsing fails
+        """
+        try:
+            # Remove extra whitespace and split by comma
+            parts = [part.strip() for part in text.split(',')]
+            
+            if len(parts) != 3:
+                return None
+                
+            # Convert to integers
+            x, y, z = [int(part) for part in parts]
+            
+            # Basic validation - ensure non-negative values
+            if x < 0 or y < 0 or z < 0:
+                return None
+                
+            return (x, y, z)
+            
+        except (ValueError, TypeError):
+            return None
 
     def onClicked(self):
-        z = self.zsetter.value()
-        y = self.ysetter.value()
-        x = self.xsetter.value()
+        text = self.coordinate_input.text().strip()
+        
+        if not text:
+            # Default to origin if empty
+            x, y, z = 0, 0, 0
+        else:
+            coords = self.parse_coordinates(text)
+            if coords is None:
+                # Show error styling and return without moving
+                self.coordinate_input.setStyleSheet("QLineEdit { background-color: #ffcccc; }")
+                print("Invalid coordinate format. Please use: x, y, z (e.g., 2005, 3857, 7444)")
+                return
+            else:
+                # Clear error styling if input is valid
+                self.coordinate_input.setStyleSheet("")
+                x, y, z = coords
+        
         self.main_window.recenterCurrentVolume(np.array([x, y, z]))
-
 
 class ZInterpolationSetter(QWidget):
     def __init__(self, main_window, parent=None):
